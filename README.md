@@ -5,6 +5,13 @@ BCC-Scripts is a collection of standalone pure-rust command line binaries made t
 
 Commands using these binaries may have to be prefixed with `./` or `.\` depending on your operating system.
 
+## BCC-Apk
+**COMMAND:** `bcc-apk`
+
+Injects modded files, modified app assets, and loose files into a provided Battle Cats APK. Also  has the capability to change the Package Suffix as well as the App Name.
+
+A `config.json` file is included upon initialization that allows you to customize your modding environment. There are a verbose amount of flags on `bcc-apk patch` allowing you to override your config, defaults, and automatic binary behavior temporarily.
+
 ## BCC-Pack
 
 **COMMAND:** `bcc-pack`
