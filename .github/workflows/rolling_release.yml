@@ -16,6 +16,7 @@ jobs:
       app_version: ${{ steps.get_version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
+
       - name: Parse Workspace Version
         id: get_version
         run: |
@@ -129,6 +130,10 @@ jobs:
             gh release create rolling \
               --title "BCC-Scripts" \
               --notes "Pre-built and packaged \`BCC-Scripts\` binaries by operating system"
+          else
+            for asset in $(gh release view rolling --json assets --jq '.assets[].name'); do
+              gh release delete-asset rolling "$asset" -y
+            done
           fi
           
           gh release upload rolling final_assets/*.zip --clobber
