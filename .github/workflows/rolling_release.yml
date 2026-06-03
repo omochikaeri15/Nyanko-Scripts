@@ -16,7 +16,6 @@ jobs:
       app_version: ${{ steps.get_version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
-
       - name: Parse Workspace Version
         id: get_version
         run: |
@@ -112,8 +111,6 @@ jobs:
     name: Publish Rolling Release
     needs: [prepare, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -126,11 +123,12 @@ jobs:
 
       - name: Update Rolling Release Page
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MY_RELEASE_TOKEN }}
         run: |
           if ! gh release view rolling > /dev/null 2>&1; then
             gh release create rolling \
               --title "BCC-Scripts" \
               --notes "Pre-built and packaged \`BCC-Scripts\` binaries by operating system"
           fi
+          
           gh release upload rolling final_assets/*.zip --clobber
