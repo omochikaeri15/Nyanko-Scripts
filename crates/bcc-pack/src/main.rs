@@ -2,6 +2,7 @@ mod io;
 mod keys;
 mod scanner;
 mod decrypt;
+pub mod workspace;
 
 use clap::{CommandFactory, Parser, Subcommand};
 use keys::UserKeys;
@@ -16,11 +17,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[command(about = "Manage and view decryption keys")]
     Keys {
         #[command(subcommand)]
         action: KeysAction,
     },
+    #[command(about = "Initialize workspace with empty keys and folders")]
     Init,
+    #[command(about = "Decrypt game files from various formats")]
     Decrypt {
         #[arg(value_name = "PACK | LIST | APK | DIR")]
         input: String,
@@ -29,7 +33,9 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum KeysAction {
+    #[command(about = "Print current keys and validate them")]
     Print,
+    #[command(about = "Initialize the 'keys.json' creation wizard")]
     Load,
 }
 
@@ -38,7 +44,11 @@ fn main() {
 
     match cli.command {
         Some(Commands::Init) => {
-            UserKeys::prompt_interactive_load();
+            if let Err(error) = workspace::init() {
+                println!("\n\x1b[31m  ✗ Failed to initialize workspace: {}\x1b[0m\n", error);
+            } else {
+                println!("\n\x1b[32m  ✓ Workspace initialized! Created empty keys.json and decrypted directory\x1b[0m\n");
+            }
         }
         Some(Commands::Keys { action }) => match action {
             KeysAction::Print => {

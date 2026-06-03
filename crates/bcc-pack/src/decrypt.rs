@@ -22,7 +22,7 @@ pub fn execute(input_target: &str) {
             println!("\nFAILURE: Session aborted!\n");
             return;
         }
-        println!("\x1b[33mNOTE: You can create a 'keys.json' file by running the 'bcc-pack init' command.\x1b[0m");
+        println!("\x1b[33mNOTE: You can create a 'keys.json' file by running the 'bcc-pack keys load' command.\x1b[0m");
     }
 
     let nyanko_keys = match keys.to_nyanko_keys() {
@@ -126,7 +126,7 @@ pub fn execute(input_target: &str) {
             }
             println!("\x1b[32m  ✓ Extracted {} files to decrypted/{}/\x1b[0m", extracted_count, pair.name);
         } else if corrupted_count > 0 {
-            println!("\x1b[31m  ✗ Skipped corrupted pack {}\x1b[0m", pair.name);
+            println!("\x1b[31m  ✗ Skipped corrupted extraction of }\x1b[0m", pair.name);
         } else {
             println!("\x1b[33m  ✗ No files found in {}\x1b[0m", pair.name);
         }

@@ -113,7 +113,7 @@ pub fn scan_and_resolve(input_path: &Path) -> Result<Vec<PackPair>, String> {
     }
 
     if has_skipped_items {
-        println!("\x1b[33m  ✗ Skipping conflicting and fragmented packs...\x1b[0m\n");
+        println!("\x1b[33m  ✗ Skipping conflicting and fragmented packs\x1b[0m\n");
     }
 
     if valid_pairs.is_empty() {
