@@ -9,7 +9,6 @@ on:
   workflow_dispatch:
 
 jobs:
-
   prepare:
     name: Get Version
     runs-on: ubuntu-latest
@@ -17,13 +16,13 @@ jobs:
       app_version: ${{ steps.get_version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
+
       - name: Parse Workspace Version
         id: get_version
         run: |
           VERSION=$(grep -m 1 "^version" Cargo.toml | awk -F '"' '{print $2}')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Found workspace version: $VERSION"
-
 
   build-windows:
     name: Build Windows
@@ -53,7 +52,6 @@ jobs:
           path: bcc-scripts-win-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
 
-
   build-linux:
     name: Build Linux
     needs: prepare
@@ -81,7 +79,6 @@ jobs:
           name: linux-zip
           path: bcc-scripts-linux-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
-
 
   build-macos:
     name: Build MacOS
@@ -111,11 +108,12 @@ jobs:
           path: bcc-scripts-mac-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
 
-
   publish-rolling:
     name: Publish Rolling Release
     needs: [prepare, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -128,12 +126,11 @@ jobs:
 
       - name: Update Rolling Release Page
         env:
-          GH_TOKEN: ${{ secrets.MY_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if ! gh release view rolling > /dev/null 2>&1; then
             gh release create rolling \
               --title "BCC-Scripts" \
               --notes "Pre-built and packaged \`BCC-Scripts\` binaries by operating system"
           fi
-
           gh release upload rolling final_assets/*.zip --clobber
