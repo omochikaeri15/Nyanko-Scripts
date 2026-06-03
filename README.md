@@ -1,6 +1,8 @@
 # BCC-Scripts
 **DISCLAIMER:** This repository and it's binaries are for convenience and convenience only. I will **not** maintain this repository or any of the binaries under it to any reasonable degree. Use at your own risk.
 
+If you would like a more feature-complete, polished, updated, or low-tech experience featuring a GUI, consider using [Battle Cats Complete](https://github.com/Battle-Cats-Complete/Battle-Cats-Complete/releases) instead.
+
 BCC-Scripts is a collection of standalone pure-rust command line binaries made to be lightweight and perform specific functions. All of these tools are detached from and **DO NOT** utilize both Java and Python, providing consistent user experience as well as output.
 
 Commands using these binaries may have to be prefixed with `./` or `.\` depending on your operating system.
