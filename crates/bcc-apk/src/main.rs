@@ -4,6 +4,7 @@ mod keys;
 mod readme;
 pub mod patch;
 pub mod workspace;
+pub mod pem;
 
 use clap::{CommandFactory, Parser, Subcommand};
 use config::AppConfig;
@@ -32,6 +33,11 @@ enum Commands {
     },
     #[command(about = "Initialize workspace or set everything to default")]
     Init,
+    #[command(about = "Manage PEM identity files")]
+    Pem {
+        #[command(subcommand)]
+        action: PemAction,
+    },
     #[command(about = "Patch a specified APK file")]
     Patch {
         #[arg(help = "Path to the target APK file")]
@@ -52,6 +58,8 @@ enum Commands {
         region: Option<String>,
         #[arg(short = 'f', long = "force", help = "Force 'update' (u) or 'create' (c) action")]
         force_action: Option<String>,
+        #[arg(short = 'm', long = "pem", help = "Override default PEM identity file")]
+        pem_file: Option<String>,
     },
 }
 
@@ -67,8 +75,14 @@ enum KeysAction {
 enum ConfigAction {
     #[command(about = "Reset \x1b[36mconfig.json\x1b[0m to factory defaults")]
     Reset,
-    #[command(about = "Interactive configuration wizard for [36mconfig.json[0m")]
+    #[command(about = "Interactive configuration wizard for \x1b[36mconfig.json\x1b[0m")]
     Create,
+}
+
+#[derive(Subcommand)]
+enum PemAction {
+    #[command(about = "Generate a new custom debug.pem identity file")]
+    Generate,
 }
 
 fn main() {
@@ -76,12 +90,28 @@ fn main() {
 
     match cli_arguments.command {
         Some(Commands::Init) => handle_init_command(),
+        Some(Commands::Pem { action }) => handle_pem_command(action),
         Some(Commands::Keys { action }) => handle_keys_command(action),
         Some(Commands::Config { action }) => handle_config_command(action),
-        Some(Commands::Patch { apk_path, patch_dir, icons_dir, loose_dir, output_dir, app_name, package_suffix, region, force_action }) => {
-            handle_patch_command(apk_path, patch_dir, icons_dir, loose_dir, output_dir, app_name, package_suffix, region, force_action)
+        Some(Commands::Patch { apk_path, patch_dir, icons_dir, loose_dir, output_dir, app_name, package_suffix, region, force_action, pem_file }) => {
+            handle_patch_command(apk_path, patch_dir, icons_dir, loose_dir, output_dir, app_name, package_suffix, region, force_action, pem_file)
         }
         None => handle_fallback_shell(),
+    }
+}
+
+fn handle_pem_command(action_type: PemAction) {
+    match action_type {
+        PemAction::Generate => {
+            println!("\n  \x1b[33m!\x1b[0m Generating new RSA-2048 Identity");
+            match pem::generate_pem() {
+                Ok(new_pem) => match pem::save_pem(&new_pem) {
+                    Ok(_) => println!("  \x1b[32m✓\x1b[0m Successfully created and saved \x1b[36mdebug.pem\x1b[0m!\n"),
+                    Err(e) => println!("  \x1b[31m✗\x1b[0m Failed to save PEM: {}\n", e),
+                },
+                Err(e) => println!("  \x1b[31m✗\x1b[0m Failed to generate PEM: {}\n", e),
+            }
+        }
     }
 }
 
@@ -95,6 +125,7 @@ fn handle_patch_command(
     override_package_suffix: Option<String>,
     override_region: Option<String>,
     override_force: Option<String>,
+    override_pem: Option<String>,
 ) {
     let base_config = AppConfig::load();
 
@@ -103,6 +134,7 @@ fn handle_patch_command(
     let final_loose_dir = override_loose.unwrap_or(base_config.loose_dir);
     let final_output_dir = override_output.unwrap_or(base_config.output_dir);
     let final_app_name = override_name.unwrap_or(base_config.app_name);
+    let final_pem_file = override_pem.or(base_config.pem_file);
 
     let final_package_suffix = override_package_suffix
         .unwrap_or(base_config.package_suffix)
@@ -146,6 +178,7 @@ fn handle_patch_command(
         &final_package_suffix,
         &final_region,
         final_force_action,
+        final_pem_file,
     ) {
         Ok((action_verb, output_filename)) => {
             println!("\nSUCCESS: {} {}!\n", action_verb, output_filename);

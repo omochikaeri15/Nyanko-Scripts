@@ -11,6 +11,7 @@ pub struct AppConfig {
     pub loose_dir: String,
     pub icons_dir: String,
     pub output_dir: String,
+    pub pem_file: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -23,6 +24,7 @@ impl Default for AppConfig {
             loose_dir: String::from("mod/loose"),
             icons_dir: String::from("mod/icons"),
             output_dir: String::from("apk"),
+            pem_file: None,
         }
     }
 }
@@ -84,6 +86,13 @@ impl AppConfig {
 
         let output_input = request_user_input("Enter Output Directory: ");
         if !output_input.is_empty() { active_config.output_dir = output_input; }
+
+        let pem_input = request_user_input("Enter custom PEM identity file: ");
+        if !pem_input.is_empty() {
+            active_config.pem_file = Some(pem_input);
+        } else {
+            active_config.pem_file = None;
+        }
 
         active_config.save();
         println!("\n  \x1b[32m✓\x1b[0m Configuration saved to \x1b[36mconfig.json\x1b[0m\n");

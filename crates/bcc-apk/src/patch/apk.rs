@@ -17,8 +17,9 @@ pub fn execute_patch(
     target_package_suffix: &str,
     target_region: &str,
     force_action: Option<String>,
+    pem_file: Option<String>,
 ) -> Result<(String, String), String> {
-    
+
     let current_keys = UserKeys::load();
     let valid_region_key = current_keys.get_validated_region_key(target_region).map_err(|error| {
         eprintln!("\n\x1b[31m  ✗ ERROR: {}\x1b[0m", error);
@@ -32,7 +33,7 @@ pub fn execute_patch(
     let _removal_result = fs::remove_dir_all(&application_directory);
     let _creation_result = fs::create_dir_all(&temporary_binary_directory);
     let _creation_result = fs::create_dir_all(&temporary_assets_directory);
-    
+
     let source_apk_file = fs::File::open(input_apk_path).map_err(|error| {
         let out = format!("Failed to open APK: {}", error);
         eprintln!("\n\x1b[31m  ✗ ERROR: {}\x1b[0m", out);
@@ -78,7 +79,7 @@ pub fn execute_patch(
             eprintln!("\n\x1b[31m  ✗ ERROR: {}\x1b[0m", out);
             out
         })?;
-    
+
     let target_package_full = format!("jp.co.ponos.battlecats{}", target_package_suffix.trim());
     let current_package = apk_manifest_editor.get_current_package().unwrap_or_default();
 
@@ -110,7 +111,7 @@ pub fn execute_patch(
                 out
             })?;
     }
-    
+
     let packed_files_count = pack::stream_pack_and_list(
         patch_directory,
         &temporary_assets_directory,
@@ -121,7 +122,7 @@ pub fn execute_patch(
         error
     })?;
     eprintln!("  \x1b[32m✓\x1b[0m Packaged \x1b[36m{}\x1b[0m files into a pack", packed_files_count);
-    
+
     let unsigned_apk_path = application_directory.join("unsigned_final.apk");
 
     let injected_file_count = modify::inject_and_build_apk(
@@ -138,21 +139,21 @@ pub fn execute_patch(
     })?;
     println!("  \x1b[32m✓\x1b[0m Rebuilt modified APK");
     println!("  \x1b[32m✓\x1b[0m Injected \x1b[36m{}\x1b[0m additional assets", injected_file_count);
-    
+
     let normalized_apk_path = application_directory.join("normalized_final.apk");
     modify::normalize_apk(&unsigned_apk_path, &normalized_apk_path, input_apk_path).map_err(|error| {
         eprintln!("\x1b[31m  ✗ ERROR: {}\x1b[0m", error);
         error
     })?;
     println!("  \x1b[32m✓\x1b[0m Normalized binaries");
-    
-    sign::sign_apk_file(&normalized_apk_path).map_err(|error| {
+
+    sign::sign_apk_file(&normalized_apk_path, pem_file).map_err(|error| {
         let out = error.to_string();
         eprintln!("\x1b[31m  ✗ ERROR: {}\x1b[0m", out);
         out
     })?;
     println!("  \x1b[32m✓\x1b[0m Signed APK");
-    
+
     let (action_verb, destination_file_path) = if is_update {
         ("Updated".to_string(), input_apk_path.to_path_buf())
     } else {
