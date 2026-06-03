@@ -72,12 +72,16 @@ pub fn get_active_pem(custom_override: Option<&String>) -> String {
         let path = PathBuf::from(custom_path);
         if let Ok(content) = fs::read_to_string(&path) {
             if content.contains("-----BEGIN PRIVATE KEY-----") && content.contains("-----BEGIN CERTIFICATE-----") {
-                println!("  \x1b[36mℹ\x1b[0m Using custom identity from config/flag: {}", path.display());
                 return content;
             }
         }
-        eprintln!("\n\x1b[31m  ✗ ERROR: Custom PEM file is invalid or missing: {}\x1b[0m\n", path.display());
         std::process::exit(1);
+    }
+
+    if let Ok(env_pem) = std::env::var("BCC_PEM") {
+        if env_pem.contains("-----BEGIN PRIVATE KEY-----") && env_pem.contains("-----BEGIN CERTIFICATE-----") {
+            return env_pem;
+        }
     }
 
     let local_path = get_pem_path();

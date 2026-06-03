@@ -3,10 +3,10 @@ use crate::io::{load_local, save_local};
 use std::io::{stdin, stdout, Write};
 
 pub const EXPECTED_HASHES: [(&str, &str); 4] = [
-    ("bac299d3cf278544782427ff7c71ef58", "6910fae125547fd957a505c67e1c72bd"), // JP
-    ("b9e48b02312e5b3dd60194a03157d70c", "45cad482726268e341f5759230ce8cff"), // EN
-    ("264a0ffd5f69d257284b93ae881ce2b6", "213cecb58af008964303ecb2cf0f5373"), // TW
-    ("3d22eafdcc4fc2a1379b103970b36217", "4cacdb0839634116caaf0b966638865b"), // KR
+    ("bac299d3cf278544782427ff7c71ef58", "6910fae125547fd957a505c67e1c72bd"),
+    ("b9e48b02312e5b3dd60194a03157d70c", "45cad482726268e341f5759230ce8cff"),
+    ("264a0ffd5f69d257284b93ae881ce2b6", "213cecb58af008964303ecb2cf0f5373"),
+    ("3d22eafdcc4fc2a1379b103970b36217", "4cacdb0839634116caaf0b966638865b"),
 ];
 
 #[derive(Clone, Serialize, Deserialize, Default, PartialEq, Debug)]
@@ -27,13 +27,27 @@ pub struct UserKeys {
 
 impl UserKeys {
     pub fn load() -> Self {
-        if let Some(json_keys) = load_local("keys.json") {
-            return json_keys;
-        }
-        if let Some(legacy_keys) = load_local("keys") {
-            return legacy_keys;
-        }
-        Self::default()
+        let mut current_keys = if let Some(json_keys) = load_local("keys.json") {
+            json_keys
+        } else if let Some(legacy_keys) = load_local("keys") {
+            legacy_keys
+        } else {
+            Self::default()
+        };
+
+        if let Ok(env_key) = std::env::var("BCC_KEY_JP") { current_keys.ja.key = env_key; }
+        if let Ok(env_iv) = std::env::var("BCC_IV_JP") { current_keys.ja.iv = env_iv; }
+
+        if let Ok(env_key) = std::env::var("BCC_KEY_EN") { current_keys.en.key = env_key; }
+        if let Ok(env_iv) = std::env::var("BCC_IV_EN") { current_keys.en.iv = env_iv; }
+
+        if let Ok(env_key) = std::env::var("BCC_KEY_TW") { current_keys.tw.key = env_key; }
+        if let Ok(env_iv) = std::env::var("BCC_IV_TW") { current_keys.tw.iv = env_iv; }
+
+        if let Ok(env_key) = std::env::var("BCC_KEY_KR") { current_keys.ko.key = env_key; }
+        if let Ok(env_iv) = std::env::var("BCC_IV_KR") { current_keys.ko.iv = env_iv; }
+
+        current_keys
     }
 
     pub fn save(&self) {
