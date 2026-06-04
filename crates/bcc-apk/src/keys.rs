@@ -29,12 +29,10 @@ pub struct UserKeys {
 
 impl UserKeys {
     pub fn load() -> Self {
-        let mut current_keys = if let Some(json_keys) = load_local("keys.json") {
+        let mut current_keys: Self = if let Some(json_keys) = load_local("keys.json") {
             json_keys
-        } else if let Some(legacy_keys) = load_local("keys") {
-            legacy_keys
         } else {
-            Self::default()
+            load_local("keys").unwrap_or_default()
         };
 
         if let Ok(env_key) = std::env::var("BCC_KEY_JP") { current_keys.ja.key = env_key; }

@@ -5,7 +5,7 @@ pub mod patch;
 pub mod workspace;
 pub mod pem;
 
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand};
 use config::AppConfig;
 use keys::UserKeys;
 use std::path::PathBuf;
@@ -25,6 +25,30 @@ struct Cli {
     json: bool,
     #[command(subcommand)]
     command: Option<Commands>,
+}
+
+#[derive(Args, Debug)]
+pub struct PatchArgs {
+    #[arg(help = "Path to the target APK file")]
+    pub apk_path: String,
+    #[arg(short = 'p', long = "patch", help = "Override default patch directory")]
+    pub patch_dir: Option<String>,
+    #[arg(short = 'i', long = "icons", help = "Override default icons directory")]
+    pub icons_dir: Option<String>,
+    #[arg(short = 'l', long = "loose", help = "Override default loose directory")]
+    pub loose_dir: Option<String>,
+    #[arg(short = 'o', long = "output", help = "Override default APK creation directory")]
+    pub output_dir: Option<String>,
+    #[arg(short = 'n', long = "name", help = "Override application name")]
+    pub app_name: Option<String>,
+    #[arg(short = 'k', long = "package", alias = "pkg", help = "Override package suffix")]
+    pub package_suffix: Option<String>,
+    #[arg(short = 'r', long = "region", help = "Override target region (JP, EN, TW, KR)")]
+    pub region: Option<String>,
+    #[arg(short = 'f', long = "force", help = "Force 'update' (u) or 'create' (c) action")]
+    pub force_action: Option<String>,
+    #[arg(short = 'm', long = "pem", help = "Override default PEM identity file")]
+    pub pem_file: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -47,28 +71,7 @@ enum Commands {
         action: PemAction,
     },
     #[command(about = "Patch a specified APK file")]
-    Patch {
-        #[arg(help = "Path to the target APK file")]
-        apk_path: String,
-        #[arg(short = 'p', long = "patch", help = "Override default patch directory")]
-        patch_dir: Option<String>,
-        #[arg(short = 'i', long = "icons", help = "Override default icons directory")]
-        icons_dir: Option<String>,
-        #[arg(short = 'l', long = "loose", help = "Override default loose directory")]
-        loose_dir: Option<String>,
-        #[arg(short = 'o', long = "output", help = "Override default APK creation directory")]
-        output_dir: Option<String>,
-        #[arg(short = 'n', long = "name", help = "Override application name")]
-        app_name: Option<String>,
-        #[arg(short = 'k', long = "package", alias = "pkg", help = "Override package suffix")]
-        package_suffix: Option<String>,
-        #[arg(short = 'r', long = "region", help = "Override target region (JP, EN, TW, KR)")]
-        region: Option<String>,
-        #[arg(short = 'f', long = "force", help = "Force 'update' (u) or 'create' (c) action")]
-        force_action: Option<String>,
-        #[arg(short = 'm', long = "pem", help = "Override default PEM identity file")]
-        pem_file: Option<String>,
-    },
+    Patch(Box<PatchArgs>),
 }
 
 #[derive(Subcommand)]
@@ -98,6 +101,9 @@ enum PemAction {
 }
 
 fn main() {
+    #[cfg(windows)]
+    let _ = colored::control::set_virtual_terminal(true);
+
     let cli = Cli::parse();
     let show_ui = !cli.json && !cli.verbose && !cli.trace;
 
@@ -135,9 +141,7 @@ fn main() {
         Some(Commands::Pem { action }) => handle_pem_command(action, show_ui),
         Some(Commands::Keys { action }) => handle_keys_command(action, show_ui),
         Some(Commands::Config { action }) => handle_config_command(action, show_ui),
-        Some(Commands::Patch { apk_path, patch_dir, icons_dir, loose_dir, output_dir, app_name, package_suffix, region, force_action, pem_file }) => {
-            handle_patch_command(apk_path, patch_dir, icons_dir, loose_dir, output_dir, app_name, package_suffix, region, force_action, pem_file, show_ui)
-        }
+        Some(Commands::Patch(args)) => handle_patch_command(*args, show_ui),
         None => handle_fallback_shell(),
     }
 }
@@ -171,36 +175,24 @@ fn handle_pem_command(action_type: PemAction, show_ui: bool) {
     }
 }
 
-fn handle_patch_command(
-    target_apk: String,
-    override_patch: Option<String>,
-    override_icons: Option<String>,
-    override_loose: Option<String>,
-    override_output: Option<String>,
-    override_name: Option<String>,
-    override_package_suffix: Option<String>,
-    override_region: Option<String>,
-    override_force: Option<String>,
-    override_pem: Option<String>,
-    show_ui: bool,
-) {
+fn handle_patch_command(args: PatchArgs, show_ui: bool) {
     let base_config = AppConfig::load();
 
-    let final_patch_dir = override_patch.unwrap_or(base_config.patch_dir);
-    let final_icons_dir = override_icons.unwrap_or(base_config.icons_dir);
-    let final_loose_dir = override_loose.unwrap_or(base_config.loose_dir);
-    let final_output_dir = override_output.unwrap_or(base_config.output_dir);
-    let final_app_name = override_name.unwrap_or(base_config.app_name);
-    let final_pem_file = override_pem.or(base_config.pem_file);
+    let final_patch_dir = args.patch_dir.unwrap_or(base_config.patch_dir);
+    let final_icons_dir = args.icons_dir.unwrap_or(base_config.icons_dir);
+    let final_loose_dir = args.loose_dir.unwrap_or(base_config.loose_dir);
+    let final_output_dir = args.output_dir.unwrap_or(base_config.output_dir);
+    let final_app_name = args.app_name.unwrap_or(base_config.app_name);
+    let final_pem_file = args.pem_file.or(base_config.pem_file);
 
-    let final_package_suffix = override_package_suffix
+    let final_package_suffix = args.package_suffix
         .unwrap_or(base_config.package_suffix)
         .chars()
         .filter(|character| !character.is_whitespace())
         .collect::<String>()
         .to_lowercase();
 
-    let final_region = override_region
+    let final_region = args.region
         .unwrap_or(base_config.region)
         .trim()
         .to_uppercase();
@@ -212,7 +204,7 @@ fn handle_patch_command(
         return;
     }
 
-    let final_force_action = override_force.map(|action_string| action_string.to_lowercase());
+    let final_force_action = args.force_action.map(|action_string| action_string.to_lowercase());
     if let Some(ref selected_action) = final_force_action
         && !["update", "u", "create", "c"].contains(&selected_action.as_str()) {
             if show_ui { println!("\n  {} Invalid Force Flag: '{}'. Must be 'update' (u) or 'create' (c)\n", "✗".red(), selected_action.cyan()); }
@@ -220,26 +212,28 @@ fn handle_patch_command(
             return;
         }
 
-    let resolved_apk_path = PathBuf::from(&target_apk);
+    let resolved_apk_path = PathBuf::from(&args.apk_path);
     if !resolved_apk_path.exists() {
         if show_ui { println!("\n  {} APK file not found at specified path\n", "✗".red()); }
-        tracing::error!(path = %target_apk, "APK file not found");
+        tracing::error!(path = %args.apk_path, "APK file not found");
         return;
     }
 
-    match patch::apk::execute_patch(
-        &resolved_apk_path,
-        &PathBuf::from(final_patch_dir),
-        &PathBuf::from(final_icons_dir),
-        &PathBuf::from(final_loose_dir),
-        &PathBuf::from(final_output_dir),
-        &final_app_name,
-        &final_package_suffix,
-        &final_region,
-        final_force_action,
-        final_pem_file,
+    let patch_config = patch::apk::PatchConfig {
+        input_apk_path: resolved_apk_path,
+        patch_directory: PathBuf::from(final_patch_dir),
+        icons_directory: PathBuf::from(final_icons_dir),
+        loose_directory: PathBuf::from(final_loose_dir),
+        output_directory_path: PathBuf::from(final_output_dir),
+        target_app_title: final_app_name,
+        target_package_suffix: final_package_suffix,
+        target_region: final_region,
+        force_action: final_force_action,
+        pem_file: final_pem_file,
         show_ui,
-    ) {
+    };
+
+    match patch::apk::execute_patch(&patch_config) {
         Ok((action_verb, output_filename)) => {
             if show_ui { println!("\nSUCCESS: {} {}!\n", action_verb, output_filename.cyan()); }
             tracing::info!(action = %action_verb, file = %output_filename, "APK Patching complete");
