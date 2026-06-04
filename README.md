@@ -6,6 +6,8 @@ If you would like a more feature-complete, polished, updated, or low-tech experi
 
 Commands utilizing these binaries may have to be prefixed with `./` or `.\` depending on your operating system.
 
+See `README.md` within a specific crate's root for more details.
+
 ### DISCLAIMER
 
 >These are unofficial, educational tools. For full details regarding PONOS Corp. copyrights, authorized handling of game files and decryption keys, and our strict liability disclaimer, please read LEGAL.md before use.
