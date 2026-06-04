@@ -93,12 +93,11 @@ pub fn print_env_template(show_ui: bool) {
 pub fn get_active_pem(custom_override: Option<&String>) -> String {
     if let Some(custom_path) = custom_override {
         let path = PathBuf::from(custom_path);
-        if let Ok(content) = fs::read_to_string(&path) {
-            if content.contains("-----BEGIN PRIVATE KEY-----") && content.contains("-----BEGIN CERTIFICATE-----") {
+        if let Ok(content) = fs::read_to_string(&path)
+            && content.contains("-----BEGIN PRIVATE KEY-----") && content.contains("-----BEGIN CERTIFICATE-----") {
                 tracing::debug!("Loaded custom identity from {}", path.display());
                 return content;
             }
-        }
         tracing::error!("Custom PEM file is invalid or missing: {}", path.display());
         std::process::exit(1);
     }
@@ -112,12 +111,11 @@ pub fn get_active_pem(custom_override: Option<&String>) -> String {
     }
 
     let local_path = get_pem_path();
-    if let Ok(content) = fs::read_to_string(&local_path) {
-        if content.contains("-----BEGIN PRIVATE KEY-----") && content.contains("-----BEGIN CERTIFICATE-----") {
+    if let Ok(content) = fs::read_to_string(&local_path)
+        && content.contains("-----BEGIN PRIVATE KEY-----") && content.contains("-----BEGIN CERTIFICATE-----") {
             tracing::debug!("Loaded local identity from debug.pem");
             return content;
         }
-    }
 
     tracing::debug!("Falling back to hardcoded default PEM");
     DEFAULT_PEM.to_string()
@@ -145,8 +143,7 @@ pub fn generate_pem() -> Result<String> {
     let cert_end_index = DEFAULT_PEM.find(cert_end_tag).context("No cert end")?;
 
     let base64_certificate = &DEFAULT_PEM[cert_start_index + cert_start_tag.len()..cert_end_index]
-        .replace('\n', "")
-        .replace('\r', "");
+        .replace(['\n', '\r'], "");
 
     let raw_der_bytes = BASE64_STANDARD.decode(base64_certificate)?;
     let mut certificate_template: Certificate = rasn::der::decode(&raw_der_bytes)?;

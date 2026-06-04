@@ -17,11 +17,10 @@ pub fn stream_pack_and_list(
     if let Ok(directory_entries) = fs::read_dir(source_directory) {
         for entry_result in directory_entries.flatten() {
             let file_path = entry_result.path();
-            if file_path.is_file() {
-                if let Ok(file_metadata) = fs::metadata(&file_path) {
+            if file_path.is_file()
+                && let Ok(file_metadata) = fs::metadata(&file_path) {
                     valid_files_with_sizes.push((file_path, file_metadata.len() as usize));
                 }
-            }
         }
     }
 
@@ -67,7 +66,7 @@ pub fn stream_pack_and_list(
     for (active_file_path, _file_size) in valid_files_with_sizes.iter() {
         let extracted_filename = active_file_path.file_name().unwrap_or_default().to_string_lossy().to_string();
 
-        let mut raw_file_data = fs::read(&active_file_path).map_err(|error| format!("Failed to read {}: {}", extracted_filename, error))?;
+        let mut raw_file_data = fs::read(active_file_path).map_err(|error| format!("Failed to read {}: {}", extracted_filename, error))?;
 
         let (active_cipher_key, active_cipher_iv) = match &parsed_standard_keys {
             Some((resolved_key_array, resolved_iv_array)) => (Some(resolved_key_array), Some(resolved_iv_array)),

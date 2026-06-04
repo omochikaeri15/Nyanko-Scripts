@@ -213,13 +213,12 @@ fn handle_patch_command(
     }
 
     let final_force_action = override_force.map(|action_string| action_string.to_lowercase());
-    if let Some(ref selected_action) = final_force_action {
-        if !["update", "u", "create", "c"].contains(&selected_action.as_str()) {
+    if let Some(ref selected_action) = final_force_action
+        && !["update", "u", "create", "c"].contains(&selected_action.as_str()) {
             if show_ui { println!("\n  {} Invalid Force Flag: '{}'. Must be 'update' (u) or 'create' (c)\n", "✗".red(), selected_action.cyan()); }
             tracing::error!(flag = %selected_action, "Invalid force flag provided");
             return;
         }
-    }
 
     let resolved_apk_path = PathBuf::from(&target_apk);
     if !resolved_apk_path.exists() {
