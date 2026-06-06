@@ -88,24 +88,20 @@ fn main() {
             .init();
     } else {
         fmt()
-            .with_file(true)
-            .with_line_number(true)
             .with_max_level(Level::INFO)
+            .without_time()
+            .with_file(false)
+            .with_target(false)
+            .with_line_number(false)
             .init();
     }
 
     match cli.command {
         Some(Commands::Init) => {
             if let Err(err) = workspace::init() {
-                if show_ui {
-                    println!("\n  {} Failed to initialize workspace: {}\n", "✗".red(), err);
-                }
                 error!("Failed to initialize workspace: {}", err);
             } else {
-                println!(
-                    "\n  {} Workspace initialized! Created empty keys.json and decrypted directory\n",
-                    "✓".green()
-                );
+                info!("Workspace initialized! Created empty keys.json and decrypted directory",);
             }
         }
         Some(Commands::Keys { action }) => match action {
