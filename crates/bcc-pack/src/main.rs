@@ -58,42 +58,21 @@ fn main() {
     let cli = Cli::parse();
 
     let show_ui = !cli.json && !cli.verbose && !cli.trace;
-
     if cli.json {
         colored::control::set_override(false);
-        let max_level = if cli.trace {
-            Level::TRACE
-        } else if cli.verbose {
-            Level::DEBUG
-        } else {
-            Level::INFO
-        };
-        fmt()
-            .json()
-            .with_file(true)
-            .with_line_number(true)
-            .with_max_level(max_level)
-            .init();
-    } else if cli.trace {
-        fmt()
-            .with_file(true)
-            .with_line_number(true)
-            .with_max_level(Level::TRACE)
-            .init();
-    } else if cli.verbose {
-        fmt()
-            .with_file(true)
-            .with_line_number(true)
-            .with_max_level(Level::DEBUG)
-            .init();
+    }
+
+    let max_level = match () {
+        _ if cli.trace => Level::TRACE,
+        _ if cli.verbose => Level::DEBUG,
+        _ => Level::INFO,
+    };
+
+    let logger = fmt().with_max_level(max_level).with_target(false);
+    if show_ui {
+        logger.without_time().init()
     } else {
-        fmt()
-            .with_max_level(Level::INFO)
-            .without_time()
-            .with_file(false)
-            .with_target(false)
-            .with_line_number(false)
-            .init();
+        logger.with_file(true).with_line_number(true).init()
     }
 
     match cli.command {
