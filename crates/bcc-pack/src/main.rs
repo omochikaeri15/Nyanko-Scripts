@@ -8,7 +8,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use colored::Colorize;
 use keys::UserKeys;
 use std::process::Command as ProcessCommand;
-use tracing::{Level, error};
+use tracing::{Level, error, info};
 use tracing_subscriber::fmt;
 
 #[derive(Parser)]
@@ -86,6 +86,12 @@ fn main() {
             .with_line_number(true)
             .with_max_level(Level::DEBUG)
             .init();
+    } else {
+        fmt()
+            .with_file(true)
+            .with_line_number(true)
+            .with_max_level(Level::INFO)
+            .init();
     }
 
     match cli.command {
@@ -96,12 +102,10 @@ fn main() {
                 }
                 error!("Failed to initialize workspace: {}", err);
             } else {
-                if show_ui {
-                    println!(
-                        "\n  {} Workspace initialized! Created empty keys.json and decrypted directory\n",
-                        "✓".green()
-                    );
-                }
+                println!(
+                    "\n  {} Workspace initialized! Created empty keys.json and decrypted directory\n",
+                    "✓".green()
+                );
             }
         }
         Some(Commands::Keys { action }) => match action {
@@ -117,7 +121,7 @@ fn main() {
             }
         },
         Some(Commands::Decrypt { input, force, output }) => {
-            decrypt::execute(&input, show_ui, force, output.as_deref());
+            decrypt::execute(&input, force, output.as_deref());
         }
         None => {
             let mut cmd = Cli::command();

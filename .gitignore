@@ -19,6 +19,7 @@ CHANGELOG.md
 # IDE Settings
 .vscode/
 .idea/
+.zed/
 *.swp
 
 # OS Junk

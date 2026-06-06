@@ -9,7 +9,7 @@ use crate::keys::UserKeys;
 use crate::scanner::scan_and_resolve;
 use nyanko::pack::cryptology::{self, check_integrity};
 
-pub fn execute(input_target: &str, show_ui: bool, force: bool, output_dir: Option<&str>) {
+pub fn execute(input_target: &str, force: bool, output_dir: Option<&str>) {
     debug!(target = input_target, "Starting decryption process");
     let input_path = Path::new(input_target);
     let keys = UserKeys::load();
@@ -18,22 +18,9 @@ pub fn execute(input_target: &str, show_ui: bool, force: bool, output_dir: Optio
 
     if !all_valid {
         if force {
-            if show_ui {
-                println!(
-                    "\n{}: Bypassing key validation failures due to --force flag.",
-                    "WARNING".yellow().bold()
-                );
-            }
             warn!("Bypassing key validation failures due to --force flag");
         } else {
-            if !show_ui {
-                error!(
-                    "Invalid or missing keys detected. Aborting session for non-interactive mode. Use --force to bypass."
-                );
-                std::process::exit(1);
-            }
-
-            print!(
+            warn!(
                 "\n{}: Invalid or missing keys detected in 'keys' file, continue anyways? [Y/n]: ",
                 "WARNING".yellow().bold()
             );
@@ -42,33 +29,24 @@ pub fn execute(input_target: &str, show_ui: bool, force: bool, output_dir: Optio
             let _ = std::io::stdin().read_line(&mut choice);
 
             if choice.trim().to_lowercase() != "y" {
-                println!("\nFAILURE: Session aborted!\n");
+                error!("\nFAILURE: Session aborted!\n");
                 return;
             }
-            println!(
-                "{}: You can create a 'keys.json' file by running the 'bcc-pack keys load' command.",
-                "NOTE".yellow()
-            );
+            warn!("You can create a 'keys.json' file by running the 'bcc-pack keys load' command.");
         }
     }
 
     let nyanko_keys = match keys.to_nyanko_keys() {
         Ok(valid_keys) => valid_keys,
         Err(err) => {
-            if show_ui {
-                println!("  {} ERROR: Failed to parse keys for decryption: {}", "✗".red(), err);
-            }
-            error!(error = %err, "Failed to parse keys");
+            error!("  {} ERROR: Failed to parse keys for decryption: {}", "✗".red(), err);
             return;
         }
     };
 
-    let pairs = match scan_and_resolve(input_path, show_ui) {
+    let pairs = match scan_and_resolve(input_path) {
         Ok(resolved_pairs) => resolved_pairs,
         Err(err) => {
-            if show_ui {
-                println!("{}", err.red());
-            }
             error!(error = %err, "Scan and resolve failed");
             return;
         }
@@ -93,36 +71,24 @@ pub fn execute(input_target: &str, show_ui: bool, force: bool, output_dir: Optio
         debug!(pack = %pair.name, output_dir = %output_base.display(), "Processing pack pair");
 
         let Ok(list_data) = fs::read(&pair.list_path) else {
-            if show_ui {
-                println!(
-                    "  {} Failed to extract files from {} (Could not read .list file)",
-                    "✗".red(),
-                    pair.name.cyan()
-                );
-            }
-            error!(pack = %pair.name, "Could not read .list file");
+            error!(
+                "  {} Failed to extract files from {} (Could not read .list file)",
+                "✗".red(),
+                pair.name.cyan()
+            );
+
             continue;
         };
 
         let decoded_list_content = match cryptology::decrypt_list(&list_data) {
             Ok(content) => content,
             Err(_) => {
-                if show_ui {
-                    println!(
-                        "  {} Failed to extract files from {} (List decryption failed)",
-                        "✗".red(),
-                        pair.name.cyan()
-                    );
-                }
                 error!(pack = %pair.name, "List decryption failed");
                 continue;
             }
         };
 
         if decoded_list_content.trim().is_empty() {
-            if show_ui {
-                println!("  {} No files found in {}", "!".yellow(), pair.name.cyan());
-            }
             warn!(pack = %pair.name, "No files found in list");
             continue;
         }
@@ -130,13 +96,6 @@ pub fn execute(input_target: &str, show_ui: bool, force: bool, output_dir: Optio
         let mut pack_file = match fs::File::open(&pair.pack_path) {
             Ok(file) => file,
             Err(_) => {
-                if show_ui {
-                    println!(
-                        "  {} Failed to extract files from {} (Could not open .pack file)",
-                        "✗".red(),
-                        pair.name.cyan()
-                    );
-                }
                 error!(pack = %pair.name, "Could not open .pack file");
                 continue;
             }
@@ -210,35 +169,12 @@ pub fn execute(input_target: &str, show_ui: bool, force: bool, output_dir: Optio
 
         if extracted_count > 0 {
             if corrupted_count > 0 {
-                if show_ui {
-                    println!(
-                        "  {} Skipped {} corrupted files in {}",
-                        "✗".red(),
-                        corrupted_count.to_string().cyan(),
-                        pair.name.cyan()
-                    );
-                }
                 warn!(pack = %pair.name, corrupted = corrupted_count, "Skipped corrupted files");
-            }
-            if show_ui {
-                println!(
-                    "  {} Extracted {} files to {}/{}/",
-                    "✓".green(),
-                    extracted_count.to_string().cyan(),
-                    display_base,
-                    pair.name.cyan()
-                );
             }
             info!(pack = %pair.name, extracted = extracted_count, dest = %pack_output_dir.display(), "Files extracted successfully");
         } else if corrupted_count > 0 {
-            if show_ui {
-                println!("  {} Skipped corrupted extraction of {}", "✗".red(), pair.name.cyan());
-            }
             error!(pack = %pair.name, corrupted = corrupted_count, "Skipped completely corrupted pack");
         } else {
-            if show_ui {
-                println!("  {} No files found in {}", "!".yellow(), pair.name.cyan());
-            }
             warn!(pack = %pair.name, "No files found in pack");
         }
     }
@@ -248,34 +184,15 @@ pub fn execute(input_target: &str, show_ui: bool, force: bool, output_dir: Optio
 
     if temp_apk_dir.exists() {
         if let Err(err) = fs::remove_dir_all(&temp_apk_dir) {
-            if show_ui {
-                println!(
-                    "\n  {} ERROR: Could not delete temporary 'apk' directory: {}",
-                    "!".yellow(),
-                    err
-                );
-            }
             error!(error = %err, "Could not delete temporary apk directory");
         } else {
-            if show_ui {
-                println!("  {} Cleaned up temporary APK files", "✓".green());
-            }
             debug!("Cleaned up temporary APK files");
         }
     }
 
     if total_extracted_count > 0 {
-        if show_ui {
-            println!(
-                "\nSUCCESS: Decrypted {} files!\n",
-                total_extracted_count.to_string().cyan()
-            );
-        }
         info!(total_extracted = total_extracted_count, "Decryption complete");
     } else {
-        if show_ui {
-            println!("\nFAILURE: Decrypted no files!\n");
-        }
         error!("Decrypted no files");
         std::process::exit(1);
     }

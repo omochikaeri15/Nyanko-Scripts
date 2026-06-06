@@ -2,7 +2,7 @@ use colored::Colorize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 use zip::ZipArchive;
 
 use crate::io::get_local_dir;
@@ -14,10 +14,7 @@ pub struct PackPair {
     pub list_path: PathBuf,
 }
 
-pub fn scan_and_resolve(input_path: &Path, show_ui: bool) -> Result<Vec<PackPair>, String> {
-    if show_ui {
-        println!();
-    }
+pub fn scan_and_resolve(input_path: &Path) -> Result<Vec<PackPair>, String> {
     debug!("Commencing path scan at: {}", input_path.display());
 
     let mut raw_packs = Vec::new();
@@ -81,17 +78,12 @@ pub fn scan_and_resolve(input_path: &Path, show_ui: bool) -> Result<Vec<PackPair
     for (stem, (packs, lists)) in grouped_files {
         if packs.len() > 1 || lists.len() > 1 {
             has_skipped_items = true;
-            if show_ui {
-                println!("  {} ERROR: Conflict for {} found:", "!".yellow(), stem.cyan());
-                for pack_path in &packs {
-                    println!("    - {}", pack_path.display());
-                }
-                for list_path in &lists {
-                    println!("    - {}", list_path.display());
-                }
-                println!();
+            for pack_path in &packs {
+                error!("    - {}", pack_path.display());
             }
-            error!(pack = %stem, "Conflict found during pair resolution");
+            for list_path in &lists {
+                error!("    - {}", list_path.display());
+            }
             continue;
         }
 
@@ -112,17 +104,9 @@ pub fn scan_and_resolve(input_path: &Path, show_ui: bool) -> Result<Vec<PackPair
 
         if pack_path.parent() != list_path.parent() {
             has_skipped_items = true;
-            if show_ui {
-                println!(
-                    "  {} ERROR: {} pack and list are in different directories:",
-                    "!".yellow(),
-                    stem.cyan()
-                );
-                println!("    - Pack: {}", pack_path.display());
-                println!("    - List: {}", list_path.display());
-                println!();
-            }
             error!(pack = %stem, "Pack and list mismatch detected");
+            error!("    - Pack: {}", pack_path.display());
+            error!("    - List: {}", list_path.display());
             continue;
         }
 
@@ -135,32 +119,25 @@ pub fn scan_and_resolve(input_path: &Path, show_ui: bool) -> Result<Vec<PackPair
     }
 
     if !missing_pack_stems.is_empty() || !missing_list_stems.is_empty() {
-        if show_ui {
-            println!(
-                "  {} ERROR: The following .list files have no matching .pack file:",
-                "!".yellow()
-            );
-            for stem in &missing_pack_stems {
-                println!("    - {}.list", stem.cyan());
-            }
-            println!();
+        warn!(
+            "  {} ERROR: The following .list files have no matching .pack file:",
+            "!".yellow()
+        );
+        for stem in &missing_pack_stems {
+            warn!("    - {}.list", stem.cyan());
+        }
 
-            println!(
-                "  {} ERROR: The following .pack files have no matching .list file:",
-                "!".yellow()
-            );
-            for stem in &missing_list_stems {
-                println!("    - {}.pack", stem.cyan());
-            }
-            println!();
+        warn!(
+            "  {} ERROR: The following .pack files have no matching .list file:",
+            "!".yellow()
+        );
+        for stem in &missing_list_stems {
+            warn!("    - {}.pack", stem.cyan());
         }
         error!("Orphaned lists or packs detected during scan");
     }
 
     if has_skipped_items {
-        if show_ui {
-            println!("  {} Skipping conflicting and fragmented packs\n", "✗".red());
-        }
         error!("Skipping fragmented packs");
     }
 
