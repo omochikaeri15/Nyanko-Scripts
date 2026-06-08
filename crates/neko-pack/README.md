@@ -1,6 +1,6 @@
-## Nyanko-Pack
+## Neko-Pack
 
-**COMMAND:** `nya-pack`
+**COMMAND:** `neko-pack`
 
 Decrypts `.pack` / `.list` files. Can target `PACK` and `LIST` directly, can walk through a given `DIR`, or can sift through `ZIP`/`APK`/`XAPK`/`APKM`/`APKS`.
 

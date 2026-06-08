@@ -1,5 +1,5 @@
 [package]
-name = "nya-pack"
+name = "neko-pack"
 version.workspace = true
 edition.workspace = true
 license-file.workspace = true

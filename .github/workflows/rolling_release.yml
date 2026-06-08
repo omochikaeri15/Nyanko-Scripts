@@ -42,13 +42,13 @@ jobs:
             cp "target/release/${BIN_NAME}.exe" staging/
           done
           cd staging
-          7z a "../nyanko-scripts-win-v${{ needs.prepare.outputs.app_version }}.zip" *
+          7z a "../neko-ware-win-v${{ needs.prepare.outputs.app_version }}.zip" *
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-zip
-          path: nyanko-scripts-win-v${{ needs.prepare.outputs.app_version }}.zip
+          path: neko-ware-win-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
 
   build-linux:
@@ -70,13 +70,13 @@ jobs:
             chmod +x "staging/${BIN_NAME}"
           done
           cd staging
-          zip -r "../nyanko-scripts-linux-v${{ needs.prepare.outputs.app_version }}.zip" ./*
+          zip -r "../neko-ware-linux-v${{ needs.prepare.outputs.app_version }}.zip" ./*
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-zip
-          path: nyanko-scripts-linux-v${{ needs.prepare.outputs.app_version }}.zip
+          path: neko-ware-linux-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
 
   build-macos:
@@ -98,13 +98,13 @@ jobs:
             chmod +x "staging/${BIN_NAME}"
           done
           cd staging
-          zip -r "../nyanko-scripts-mac-v${{ needs.prepare.outputs.app_version }}.zip" ./*
+          zip -r "../neko-ware-mac-v${{ needs.prepare.outputs.app_version }}.zip" ./*
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-zip
-          path: nyanko-scripts-mac-v${{ needs.prepare.outputs.app_version }}.zip
+          path: neko-ware-mac-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
 
   publish-rolling:
@@ -129,6 +129,6 @@ jobs:
           sleep 3
           gh release create rolling \
             --target ${{ github.sha }} \
-            --title "Nyanko-Scripts" \
-            --notes "Pre-built and packaged \`Nyanko-Scripts\` binaries by operating system" \
+            --title "Neko-Ware" \
+            --notes "Pre-built and packaged \`Neko-Ware\` binaries by operating system" \
             final_assets/*.zip

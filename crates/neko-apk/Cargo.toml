@@ -1,5 +1,5 @@
 [package]
-name = "nya-apk"
+name = "neko-apk"
 version.workspace = true
 edition.workspace = true
 license-file.workspace = true
