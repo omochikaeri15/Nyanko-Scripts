@@ -15,7 +15,7 @@ use tracing::Level;
 use tracing_subscriber::fmt;
 
 #[derive(Parser)]
-#[command(name = "bcc-apk", version, about = "BCC Standalone APK Patcher", long_about = None)]
+#[command(name = "nya-apk", version, about = "BCC Standalone APK Patcher", long_about = None)]
 struct Cli {
     #[arg(short, long, global = true, help = "Enable verbose debug logging")]
     verbose: bool,

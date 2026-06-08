@@ -1,8 +1,8 @@
-# BCC-Scripts
+# Nyanko-Scripts
 
 A collection of standalone pure-rust command line binaries made to be lightweight and perform specific functions related to *The Battle Cats*. All scripts are detached from and **DO NOT** utilize Java or Python, not internally through bytes or externally through binaries, period. These tools are aimed at providing a portable, consistent, and efficient experience for users.
 
-If you would like a more feature-complete, polished, updated, or low-tech experience featuring a GUI, consider using [Battle Cats Complete](https://github.com/Battle-Cats-Complete/Battle-Cats-Complete/releases) instead. The code that makes up these tools was ripped out of [Battle Cats Complete](https://github.com/Battle-Cats-Complete/Battle-Cats-Complete/) and adapted to a CLI format.
+Be warned that this repository is a side-project by a hobbyist. Issues and Pull Requests may get ignored for long periods of time or even forever. These tools were made for convenience, with other tools that provide similar functionality being updated and maintained more consistently, while likely outperforming the binaries that this repository produces.
 
 Commands utilizing these binaries may have to be prefixed with `./` or `.\` depending on your operating system.
 

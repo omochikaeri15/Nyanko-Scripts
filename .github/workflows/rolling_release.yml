@@ -42,13 +42,13 @@ jobs:
             cp "target/release/${BIN_NAME}.exe" staging/
           done
           cd staging
-          7z a "../bcc-scripts-win-v${{ needs.prepare.outputs.app_version }}.zip" *
+          7z a "../nyanko-scripts-win-v${{ needs.prepare.outputs.app_version }}.zip" *
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-zip
-          path: bcc-scripts-win-v${{ needs.prepare.outputs.app_version }}.zip
+          path: nyanko-scripts-win-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
 
   build-linux:
@@ -70,13 +70,13 @@ jobs:
             chmod +x "staging/${BIN_NAME}"
           done
           cd staging
-          zip -r "../bcc-scripts-linux-v${{ needs.prepare.outputs.app_version }}.zip" ./*
+          zip -r "../nyanko-scripts-linux-v${{ needs.prepare.outputs.app_version }}.zip" ./*
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-zip
-          path: bcc-scripts-linux-v${{ needs.prepare.outputs.app_version }}.zip
+          path: nyanko-scripts-linux-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
 
   build-macos:
@@ -98,18 +98,18 @@ jobs:
             chmod +x "staging/${BIN_NAME}"
           done
           cd staging
-          zip -r "../bcc-scripts-mac-v${{ needs.prepare.outputs.app_version }}.zip" ./*
+          zip -r "../nyanko-scripts-mac-v${{ needs.prepare.outputs.app_version }}.zip" ./*
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-zip
-          path: bcc-scripts-mac-v${{ needs.prepare.outputs.app_version }}.zip
+          path: nyanko-scripts-mac-v${{ needs.prepare.outputs.app_version }}.zip
           retention-days: 1
 
   publish-rolling:
     name: Publish Rolling Release
-    needs: [prepare, build-windows, build-linux, build-macos]
+    needs: [ prepare, build-windows, build-linux, build-macos ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -125,14 +125,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.MY_RELEASE_TOKEN }}
         run: |
-          if ! gh release view rolling > /dev/null 2>&1; then
-            gh release create rolling \
-              --title "BCC-Scripts" \
-              --notes "Pre-built and packaged \`BCC-Scripts\` binaries by operating system"
-          else
-            for asset in $(gh release view rolling --json assets --jq '.assets[].name'); do
-              gh release delete-asset rolling "$asset" -y
-            done
-          fi
-          
-          gh release upload rolling final_assets/*.zip --clobber
+          gh release delete rolling --cleanup-tag -y || true
+          sleep 3
+          gh release create rolling \
+            --target ${{ github.sha }} \
+            --title "Nyanko-Scripts" \
+            --notes "Pre-built and packaged \`Nyanko-Scripts\` binaries by operating system" \
+            final_assets/*.zip

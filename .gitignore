@@ -6,6 +6,7 @@ Cargo.lock
 # Quality of Life
 .cargo/
 TODO.md
+rustfmt.toml
 
 # Extracted Game Data
 keys

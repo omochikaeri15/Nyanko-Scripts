@@ -46,7 +46,7 @@ pub fn execute(input_target: &str, show_ui: bool, force: bool, output_dir: Optio
                 return;
             }
             println!(
-                "{}: You can create a 'keys.json' file by running the 'bcc-pack keys load' command.",
+                "{}: You can create a 'keys.json' file by running the 'nya-pack keys load' command.",
                 "NOTE".yellow()
             );
         }

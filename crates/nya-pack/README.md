@@ -1,6 +1,6 @@
-## BCC-Pack
+## Nyanko-Pack
 
-**COMMAND:** `bcc-pack`
+**COMMAND:** `nya-pack`
 
 Decrypts `.pack` / `.list` files. Can target `PACK` and `LIST` directly, can walk through a given `DIR`, or can sift through `ZIP`/`APK`/`XAPK`/`APKM`/`APKS`.
 

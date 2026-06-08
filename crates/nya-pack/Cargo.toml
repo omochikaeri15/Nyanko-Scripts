@@ -1,5 +1,5 @@
 [package]
-name = "bcc-pack"
+name = "nya-pack"
 version.workspace = true
 edition.workspace = true
 license-file.workspace = true
