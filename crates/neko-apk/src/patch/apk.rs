@@ -8,6 +8,7 @@ use crate::keys::UserKeys;
 use crate::patch::modify;
 use crate::patch::pack;
 use crate::patch::sign;
+use crate::patch::libnative;
 
 pub struct PatchConfig {
     pub input_apk_path: PathBuf,
@@ -158,13 +159,13 @@ pub fn execute_patch(config: &PatchConfig) -> Result<(String, String), String> {
         "DownloadLocal",
         valid_region_key,
     )
-    .map_err(|err| {
-        if config.show_ui {
-            println!("  {} ERROR: {err}", "✗".red());
-        }
-        error!(error = %err, "Failed to pack mod files");
-        err
-    })?;
+        .map_err(|err| {
+            if config.show_ui {
+                println!("  {} ERROR: {err}", "✗".red());
+            }
+            error!(error = %err, "Failed to pack mod files");
+            err
+        })?;
 
     if config.show_ui {
         println!(
@@ -177,6 +178,11 @@ pub fn execute_patch(config: &PatchConfig) -> Result<(String, String), String> {
         packed_files = packed_files_count,
         "Successfully built modification pack"
     );
+
+    let optional_libnative_path = libnative::find_local_libnative();
+    if optional_libnative_path.is_some() {
+        debug!("Modded libnative-lib.so detected, preparing to queue for injection");
+    }
 
     let unsigned_apk_path = application_directory.join("unsigned_final.apk");
 
@@ -197,14 +203,15 @@ pub fn execute_patch(config: &PatchConfig) -> Result<(String, String), String> {
         } else {
             Some(resource_extraction_path.as_path())
         },
+        optional_libnative_path.as_deref(),
     )
-    .map_err(|err| {
-        if config.show_ui {
-            println!("  {} ERROR: {err}", "✗".red());
-        }
-        error!(error = %err, "APK injection and build failed");
-        err.to_string()
-    })?;
+        .map_err(|err| {
+            if config.show_ui {
+                println!("  {} ERROR: {err}", "✗".red());
+            }
+            error!(error = %err, "APK injection and build failed");
+            err.to_string()
+        })?;
 
     if config.show_ui {
         println!("  {} Rebuilt modified APK", "✓".green());
@@ -214,7 +221,11 @@ pub fn execute_patch(config: &PatchConfig) -> Result<(String, String), String> {
             injected_file_count.to_string().cyan()
         );
     }
+
     info!(injected_assets = injected_file_count, "Rebuilt APK with new injections");
+    if optional_libnative_path.is_some() {
+        info!("Successfully substituted vanilla libnative with custom binary payload");
+    }
 
     let normalized_apk_path = application_directory.join("normalized_final.apk");
     debug!("Normalizing structural zip alignment");

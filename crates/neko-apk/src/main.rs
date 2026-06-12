@@ -31,7 +31,7 @@ struct Cli {
 pub struct PatchArgs {
     #[arg(help = "Path to the target APK file")]
     pub apk_path: String,
-    #[arg(short = 'p', long = "mod", help = "Override default mod directory")]
+    #[arg(short = 'p', long = "patch", help = "Override default patch directory")]
     pub patch_dir: Option<String>,
     #[arg(short = 'i', long = "icons", help = "Override default icons directory")]
     pub icons_dir: Option<String>,

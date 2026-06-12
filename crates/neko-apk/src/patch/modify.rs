@@ -206,8 +206,8 @@ impl ApkEditor {
 
         if let Some(ref mut mutable_table) = self.res_table
             && let Some(first_package) = mutable_table.packages.first_mut() {
-                first_package.name.clone_from(&final_constructed_package_name);
-            }
+            first_package.name.clone_from(&final_constructed_package_name);
+        }
 
         Ok(())
     }
@@ -263,9 +263,9 @@ fn replace_package_references(
 
         if let Some(found_string) = resolved_string_value
             && found_string.contains(old_package_identity) {
-                let replaced_value = found_string.replace(old_package_identity, new_package_identity);
-                attribute_node.write_string(replaced_value.into(), string_pool);
-            }
+            let replaced_value = found_string.replace(old_package_identity, new_package_identity);
+            attribute_node.write_string(replaced_value.into(), string_pool);
+        }
     }
 
     for child_node in &mut element_node.children {
@@ -287,6 +287,7 @@ pub fn inject_and_build_apk(
     loose_directory: &Path,
     patched_manifest_path: Option<&Path>,
     patched_arsc_path: Option<&Path>,
+    patched_libnative_path: Option<&Path>, // <--- NEW PARAMETER
 ) -> Result<usize> {
     let source_file = fs::File::open(source_apk_path)?;
     let mut zip_archive = ZipArchive::new(source_file)?;
@@ -327,6 +328,7 @@ pub fn inject_and_build_apk(
     let has_custom_push_icon = icons_directory.join("push_icon.png").exists();
 
     let mut pre_existing_resource_folders = HashSet::new();
+    let mut discovered_libnative_zip_paths = Vec::new();
 
     for archive_index in 0..zip_archive.len() {
         let archive_file = zip_archive.by_index(archive_index)?;
@@ -342,8 +344,18 @@ pub fn inject_and_build_apk(
 
         if internal_file_name.starts_with("res/")
             && let Some(parent_path) = Path::new(&internal_file_name).parent() {
-                pre_existing_resource_folders.insert(parent_path.to_string_lossy().replace("\\", "/"));
-            }
+            pre_existing_resource_folders.insert(parent_path.to_string_lossy().replace("\\", "/"));
+        }
+
+        // NEW LOGIC: Intercept libnative-lib.so in the zip stream
+        if patched_libnative_path.is_some()
+            && internal_file_name.starts_with("lib/")
+            && internal_file_name.ends_with("libnative-lib.so")
+        {
+            trace!(file = %internal_file_name, "Intercepted vanilla native library in archive; queuing for replacement");
+            discovered_libnative_zip_paths.push(internal_file_name.clone());
+            continue;
+        }
 
         if active_files_to_inject.contains(&internal_file_name) {
             continue;
@@ -393,6 +405,22 @@ pub fn inject_and_build_apk(
     }
     if let Some(arsc_path) = patched_arsc_path {
         inject_local_file(arsc_path, "resources.arsc", true)?;
+    }
+
+    // NEW LOGIC: Inject the modded libnative-lib.so
+    if let Some(lib_path) = patched_libnative_path {
+        debug!("Injecting modded libnative payload...");
+        if discovered_libnative_zip_paths.is_empty() {
+            // Fallback in case the APK archive structure was strange
+            let fallback_path = "lib/x86_64/libnative-lib.so";
+            trace!(file = %fallback_path, "No vanilla libnative found in root sweep, using fallback structural path");
+            inject_local_file(lib_path, fallback_path, true)?; // true = Store uncompressed (required for .so alignment)
+        } else {
+            for zip_path in discovered_libnative_zip_paths {
+                trace!(file = %zip_path, "Overwriting exact zip path with modded native library");
+                inject_local_file(lib_path, &zip_path, true)?;
+            }
+        }
     }
 
     if assets_directory.exists() {
@@ -536,7 +564,7 @@ pub fn normalize_apk(input_apk_path: &Path, output_apk_path: &Path, original_ref
 
         final_zip_writer.start_file(&internal_file_name, normalized_write_options)?;
         final_zip_writer.write_all(&extracted_file_data)?;
-        trace!(file = %internal_file_name, "Re-aligned structural storage data block");
+        trace!(file = %internal_file_name, alignment = required_byte_alignment, "Re-aligned structural storage data block");
     }
 
     final_zip_writer.finish()?;
