@@ -328,6 +328,7 @@ pub fn inject_and_build_apk(
     let has_custom_icon = icons_directory.join("icon.png").exists();
     let has_custom_foreground_icon = icons_directory.join("icon_foreground.png").exists();
     let has_custom_push_icon = icons_directory.join("push_icon.png").exists();
+    let fallback_foreground = has_custom_icon && !has_custom_foreground_icon;
 
     let mut pre_existing_resource_folders = HashSet::new();
 
@@ -386,12 +387,15 @@ pub fn inject_and_build_apk(
 
         if internal_file_name.starts_with("res/") {
             if short_file_name == "icon.png" && has_custom_icon {
+                trace!(file = %internal_file_name, "Intercepted original icon.png");
                 continue;
             }
-            if short_file_name == "icon_foreground.png" && has_custom_foreground_icon {
+            if short_file_name == "icon_foreground.png" && (has_custom_foreground_icon || fallback_foreground) {
+                trace!(file = %internal_file_name, "Intercepted and dropped original icon_foreground.png");
                 continue;
             }
             if short_file_name == "push_icon.png" && has_custom_push_icon {
+                trace!(file = %internal_file_name, "Intercepted original push_icon.png");
                 continue;
             }
         }
@@ -489,18 +493,20 @@ pub fn inject_and_build_apk(
     }
 
     if icons_directory.exists() {
+        let foreground_source = if fallback_foreground { "icon.png" } else { "icon_foreground.png" };
+
         let icon_blueprints = vec![
-            ("icon.png", 192, 144, 96, has_custom_icon),
-            ("icon_foreground.png", 432, 324, 216, has_custom_foreground_icon),
-            ("push_icon.png", 96, 72, 48, has_custom_push_icon),
+            ("icon.png", "icon.png", 192, 144, 96, has_custom_icon, false),
+            ("icon_foreground.png", foreground_source, 432, 324, 216, has_custom_foreground_icon || fallback_foreground, fallback_foreground),
+            ("push_icon.png", "push_icon.png", 96, 72, 48, has_custom_push_icon, false),
         ];
 
-        for (blueprint_file_name, size_xxxhdpi, size_xxhdpi, size_xhdpi, asset_exists) in icon_blueprints {
+        for (blueprint_file_name, source_name, size_xxxhdpi, size_xxhdpi, size_xhdpi, asset_exists, is_fallback) in icon_blueprints {
             if !asset_exists {
                 continue;
             }
 
-            let source_image_path = icons_directory.join(blueprint_file_name);
+            let source_image_path = icons_directory.join(source_name);
             let Ok(decoded_source_image) = image::open(&source_image_path) else {
                 continue;
             };
@@ -520,7 +526,7 @@ pub fn inject_and_build_apk(
                 ("mipmap-xhdpi-v4", size_xhdpi),
             ];
 
-            for (target_folder_name, target_size) in target_resolutions {
+            for (target_folder_name, canvas_size) in target_resolutions {
                 let formatted_resource_folder = format!("res/{target_folder_name}");
 
                 if !pre_existing_resource_folders.contains(&formatted_resource_folder) {
@@ -528,11 +534,27 @@ pub fn inject_and_build_apk(
                 }
 
                 let final_zip_path = format!("{formatted_resource_folder}/{blueprint_file_name}");
+
+                let inner_scale_size = if is_fallback {
+                    (canvas_size as f32 * 0.67) as u32
+                } else {
+                    canvas_size
+                };
+
                 let properly_scaled_image =
-                    decoded_source_image.resize_exact(target_size, target_size, image::imageops::FilterType::Lanczos3);
+                    decoded_source_image.resize_exact(inner_scale_size, inner_scale_size, image::imageops::FilterType::Lanczos3);
+
+                let final_image = if is_fallback {
+                    let mut canvas = image::RgbaImage::new(canvas_size, canvas_size);
+                    let offset = ((canvas_size.saturating_sub(inner_scale_size)) / 2) as i64;
+                    image::imageops::overlay(&mut canvas, &properly_scaled_image.to_rgba8(), offset, offset);
+                    image::DynamicImage::ImageRgba8(canvas)
+                } else {
+                    properly_scaled_image
+                };
 
                 let mut memory_cursor = Cursor::new(Vec::new());
-                if properly_scaled_image
+                if final_image
                     .write_to(&mut memory_cursor, image::ImageFormat::Png)
                     .is_err()
                 {
