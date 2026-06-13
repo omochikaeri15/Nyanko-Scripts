@@ -3,9 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 pub fn get_local_dir() -> PathBuf {
-    let mut current_executable = std::env::current_exe().unwrap_or(".".into());
-    current_executable.pop();
-    current_executable
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
 pub fn load_local<T: DeserializeOwned>(filename: &str) -> Option<T> {

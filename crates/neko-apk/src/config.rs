@@ -9,13 +9,13 @@ pub struct AppConfig {
     pub app_name: String,
     pub package_suffix: String,
     pub region: String,
+    pub architecture: Option<String>,
     pub patch_dir: String,
     pub loose_dir: String,
     pub icons_dir: String,
     pub code_dir: String,
     pub output_dir: String,
     pub pem_file: Option<String>,
-    pub architecture: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -24,13 +24,13 @@ impl Default for AppConfig {
             app_name: String::from("The Modded Cats"),
             package_suffix: String::from("mod"),
             region: String::from("EN"),
+            architecture: None,
             patch_dir: String::from("mod/patch"),
             loose_dir: String::from("mod/loose"),
             icons_dir: String::from("mod/icons"),
             code_dir: String::from("mod/code"),
             output_dir: String::from("apk"),
             pem_file: None,
-            architecture: None,
         }
     }
 }
@@ -125,16 +125,16 @@ impl AppConfig {
             active_config.icons_dir = icons_input;
         }
 
-        let output_input = request_user_input("Enter Output Directory: ");
-        if !output_input.is_empty() {
-            active_config.output_dir = output_input;
-        }
-
         let code_input = request_user_input("Enter Code Directory: ");
         if !code_input.is_empty() {
             active_config.code_dir = code_input;
         }
 
+        let output_input = request_user_input("Enter Output Directory: ");
+        if !output_input.is_empty() {
+            active_config.output_dir = output_input;
+        }
+        
         let pem_input = request_user_input("Enter custom PEM identity file: ");
         if !pem_input.is_empty() {
             active_config.pem_file = Some(pem_input);

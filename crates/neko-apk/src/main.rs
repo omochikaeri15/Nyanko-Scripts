@@ -217,7 +217,7 @@ fn handle_patch_command(args: PatchArgs, show_ui: bool) {
     if !valid_regions.contains(&final_region.as_str()) {
         if show_ui {
             println!(
-                "\n  {} Invalid Region: '{}'. Must be JP, EN, TW, or KR.\n",
+                "\n  {} Invalid Region: '{}' Must be JP, EN, TW, or KR\n",
                 "✗".red(),
                 final_region.cyan()
             );
@@ -232,7 +232,7 @@ fn handle_patch_command(args: PatchArgs, show_ui: bool) {
     {
         if show_ui {
             println!(
-                "\n  {} Invalid Force Flag: '{}'. Must be 'update' (u) or 'create' (c)\n",
+                "\n  {} Invalid Force Flag: '{}' Must be 'update' (u) or 'create' (c)\n",
                 "✗".red(),
                 selected_action.cyan()
             );
@@ -246,17 +246,17 @@ fn handle_patch_command(args: PatchArgs, show_ui: bool) {
         if show_ui {
             println!("\n  {} APK file not found at specified path\n", "✗".red());
         }
-        tracing::error!(path = %args.apk_path, "APK file not found");
+        tracing::error!(path = %resolved_apk_path.display(), "APK file not found");
         return;
     }
 
     let patch_config = patch::apk::PatchConfig {
         input_apk_path: resolved_apk_path,
-        patch_directory: PathBuf::from(final_patch_dir),
-        icons_directory: PathBuf::from(final_icons_dir),
-        loose_directory: PathBuf::from(final_loose_dir),
-        code_directory: PathBuf::from(final_code_dir),
-        output_directory_path: PathBuf::from(final_output_dir),
+        patch_directory: PathBuf::from(&final_patch_dir),
+        icons_directory: PathBuf::from(&final_icons_dir),
+        loose_directory: PathBuf::from(&final_loose_dir),
+        code_directory: PathBuf::from(&final_code_dir),
+        output_directory_path: PathBuf::from(&final_output_dir),
         target_app_title: final_app_name,
         target_package_suffix: final_package_suffix,
         target_region: final_region,
@@ -288,7 +288,7 @@ fn handle_init_command(show_ui: bool) {
         Ok(_) => {
             if show_ui {
                 println!(
-                    "\n  {} Workspace initialized! Created config files and directories.\n",
+                    "\n  {} Workspace initialized, Created config files and directories\n",
                     "✓".green()
                 );
             }
