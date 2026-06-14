@@ -10,7 +10,7 @@ use sha2::{Digest as _, Sha256};
 use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::Path;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, info, trace};
 
 const APK_SIGNING_BLOCK_MAGIC: &[u8] = b"APK Sig Block 42";
 const APK_SIGNING_BLOCK_V2_ID: u32 = 0x7109871a;

@@ -1,27 +1,19 @@
-# Rust Build Artifacts
+# Workspace
+keys.json
+config.json
+mod/
+decrypted/
+apk/
+app/
+
+# Other
 /target/
 **/*.rs.bk
 Cargo.lock
-
-# Quality of Life
 .cargo/
-TODO.md
 rustfmt.toml
-
-# Extracted Game Data
-keys
-keys.json
-*.pack
-*.list
-
-# Update Leftovers
-CHANGELOG.md
-
-# IDE Settings
 .vscode/
 .idea/
 *.swp
-
-# OS Junk
 .DS_Store
 Thumbs.db
