@@ -9,7 +9,6 @@ app/
 # Other
 /target/
 **/*.rs.bk
-Cargo.lock
 .cargo/
 rustfmt.toml
 .vscode/
