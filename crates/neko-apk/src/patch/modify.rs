@@ -289,6 +289,7 @@ pub fn inject_and_build_apk(
     patched_manifest_path: Option<&Path>,
     patched_arsc_path: Option<&Path>,
     target_architecture: Option<&str>,
+    force_inject_path: Option<&Path>,
     show_ui: bool,
 ) -> Result<usize> {
     let source_file = fs::File::open(source_apk_path)?;
@@ -332,6 +333,25 @@ pub fn inject_and_build_apk(
 
     let mut pre_existing_resource_folders = HashSet::new();
 
+    let mut force_inject_map = HashMap::new();
+    if let Some(force_path) = force_inject_path {
+        if force_path.is_file() {
+            if let Some(name) = force_path.file_name() {
+                force_inject_map.insert(name.to_string_lossy().into_owned(), force_path.to_path_buf());
+            }
+        } else if force_path.is_dir() {
+            if let Ok(entries) = fs::read_dir(force_path) {
+                for entry_result in entries.flatten() {
+                    if !entry_result.path().is_file() {
+                        continue;
+                    }
+                    let name = entry_result.file_name().to_string_lossy().into_owned();
+                    force_inject_map.insert(name, entry_result.path());
+                }
+            }
+        }
+    }
+
     let mut custom_code_files = HashMap::new();
     if code_directory.exists() {
         let code_entries = fs::read_dir(code_directory)?;
@@ -344,6 +364,25 @@ pub fn inject_and_build_apk(
     }
     let mut discovered_code_zip_paths = Vec::new();
     let mut has_target_architecture_folder = false;
+
+    let inject_local_file = |writer: &mut ZipWriter<fs::File>, count: &mut usize, local_file_path: &Path, internal_zip_path: &str, require_store: bool| -> Result<()> {
+        if !local_file_path.exists() {
+            return Ok(());
+        }
+        let raw_file_data = fs::read(local_file_path)?;
+        let compression_method = if require_store {
+            zip::CompressionMethod::Stored
+        } else {
+            zip::CompressionMethod::Deflated
+        };
+        let write_options = zip::write::SimpleFileOptions::default().compression_method(compression_method);
+
+        writer.start_file(internal_zip_path, write_options)?;
+        writer.write_all(&raw_file_data)?;
+        *count += 1;
+        trace!(file = %internal_zip_path, "Injected modified payload into APK stream");
+        Ok(())
+    };
 
     for archive_index in 0..zip_archive.len() {
         let archive_file = zip_archive.by_index(archive_index)?;
@@ -367,6 +406,13 @@ pub fn inject_and_build_apk(
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned();
+
+        if let Some(forced_local_path) = force_inject_map.get(&short_file_name) {
+            trace!(file = %internal_file_name, "Force overwriting file from --force flag directive");
+            let require_store = archive_file.compression() == zip::CompressionMethod::Stored;
+            inject_local_file(&mut zip_writer, &mut successfully_injected_count, forced_local_path, &internal_file_name, require_store)?;
+            continue;
+        }
 
         if internal_file_name.starts_with("lib/") {
             if let Some(arch) = target_architecture {
@@ -403,31 +449,11 @@ pub fn inject_and_build_apk(
         zip_writer.raw_copy_file(archive_file)?;
     }
 
-    let mut inject_local_file = |local_file_path: &Path, internal_zip_path: &str, require_store: bool| -> Result<()> {
-        if !local_file_path.exists() {
-            return Ok(());
-        }
-
-        let raw_file_data = fs::read(local_file_path)?;
-        let compression_method = if require_store {
-            zip::CompressionMethod::Stored
-        } else {
-            zip::CompressionMethod::Deflated
-        };
-        let write_options = zip::write::SimpleFileOptions::default().compression_method(compression_method);
-
-        zip_writer.start_file(internal_zip_path, write_options)?;
-        zip_writer.write_all(&raw_file_data)?;
-        successfully_injected_count += 1;
-        trace!(file = %internal_zip_path, "Injected modified payload into APK stream");
-        Ok(())
-    };
-
     if let Some(manifest_path) = patched_manifest_path {
-        inject_local_file(manifest_path, "AndroidManifest.xml", false)?;
+        inject_local_file(&mut zip_writer, &mut successfully_injected_count, manifest_path, "AndroidManifest.xml", false)?;
     }
     if let Some(arsc_path) = patched_arsc_path {
-        inject_local_file(arsc_path, "resources.arsc", true)?;
+        inject_local_file(&mut zip_writer, &mut successfully_injected_count, arsc_path, "resources.arsc", true)?;
     }
 
     if !custom_code_files.is_empty() {
@@ -446,7 +472,7 @@ pub fn inject_and_build_apk(
                 for (zip_path, short_name) in discovered_code_zip_paths {
                     if let Some(local_path) = custom_code_files.get(&short_name) {
                         trace!(file = %zip_path, "Overwriting exact zip path with modded native library");
-                        inject_local_file(local_path, &zip_path, true)?;
+                        inject_local_file(&mut zip_writer, &mut successfully_injected_count, local_path, &zip_path, true)?;
                         successfully_injected_keys.insert(short_name.clone());
                     }
                 }
@@ -458,7 +484,7 @@ pub fn inject_and_build_apk(
                 for (short_name, local_path) in custom_code_files {
                     let fallback_path = format!("lib/{arch}/{short_name}");
                     trace!(file = %fallback_path, "Injecting new native library into target architecture");
-                    inject_local_file(&local_path, &fallback_path, true)?;
+                    inject_local_file(&mut zip_writer, &mut successfully_injected_count, &local_path, &fallback_path, true)?;
                 }
             }
         } else {
@@ -477,7 +503,7 @@ pub fn inject_and_build_apk(
             if entry_result.path().is_file() {
                 let generated_name = entry_result.file_name().to_string_lossy().to_string();
                 let force_store = generated_name.ends_with(".pack") || generated_name.ends_with(".list");
-                inject_local_file(&entry_result.path(), &format!("assets/{generated_name}"), force_store)?;
+                inject_local_file(&mut zip_writer, &mut successfully_injected_count, &entry_result.path(), &format!("assets/{generated_name}"), force_store)?;
             }
         }
     }
@@ -487,7 +513,7 @@ pub fn inject_and_build_apk(
         for entry_result in directory_entries.flatten() {
             if entry_result.path().is_file() {
                 let generated_name = entry_result.file_name().to_string_lossy().to_string();
-                inject_local_file(&entry_result.path(), &format!("assets/{generated_name}"), true)?;
+                inject_local_file(&mut zip_writer, &mut successfully_injected_count, &entry_result.path(), &format!("assets/{generated_name}"), true)?;
             }
         }
     }

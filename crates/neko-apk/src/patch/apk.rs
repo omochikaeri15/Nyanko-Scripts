@@ -21,6 +21,7 @@ pub struct PatchConfig {
     pub target_package_suffix: String,
     pub target_region: String,
     pub output_behavior: OutputBehavior,
+    pub force_inject: Option<PathBuf>,
     pub pem_file: Option<String>,
     pub target_architecture: Option<String>,
     pub show_ui: bool,
@@ -232,6 +233,7 @@ pub fn execute_patch(config: &PatchConfig) -> Result<(String, String), String> {
             Some(resource_extraction_path.as_path())
         },
         config.target_architecture.as_deref(),
+        config.force_inject.as_deref(),
         config.show_ui,
     )
         .map_err(|err| {

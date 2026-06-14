@@ -39,3 +39,37 @@ pub fn init(_show_ui: bool) -> std::io::Result<()> {
 
     Ok(())
 }
+
+pub fn repair(show_ui: bool) -> std::io::Result<()> {
+    debug!("Repairing default workspace configurations...");
+
+    let keys_path = get_local_dir().join("keys.json");
+    if !keys_path.exists() {
+        debug!("Keys file missing, generating defaults.");
+        let default_keys = UserKeys::default();
+        default_keys.save();
+    }
+
+    AppConfig::repair(show_ui);
+
+    let mut readme_path = get_local_dir();
+    readme_path.push("README.md");
+    if !readme_path.exists() {
+        debug!("README missing, recreating.");
+        fs::write(readme_path, README_CONTENT)?;
+    }
+
+    let base_directory = get_local_dir();
+    let required_folder_names = ["mod", "mod/loose", "mod/patch", "mod/icons", "mod/code", "apk"];
+
+    debug!("Verifying workspace directories.");
+    for target_folder in required_folder_names {
+        let mut directory_path = base_directory.clone();
+        directory_path.push(target_folder);
+        if !directory_path.exists() {
+            fs::create_dir_all(&directory_path)?;
+        }
+    }
+
+    Ok(())
+}

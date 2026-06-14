@@ -47,8 +47,10 @@ pub struct PatchArgs {
     pub package_suffix: Option<String>,
     #[arg(short = 'r', long = "region", help = "Override target region (JP, EN, TW, KR)")]
     pub region: Option<String>,
-    #[arg(short = 'f', long = "force", help = "Force 'update' (u), 'create' (c), or 'automatic' (a) action")]
-    pub force_action: Option<String>,
+    #[arg(short = 'b', long = "behavior", help = "Force 'update' (u), 'create' (c), or 'automatic' (a) action")]
+    pub behavior: Option<String>,
+    #[arg(short = 'f', long = "force", help = "Forcefully overwrite any file with matching name+ext from the given file/folder")]
+    pub force_inject: Option<String>,
     #[arg(short = 'm', long = "pem", help = "Override default PEM identity file")]
     pub pem_file: Option<String>,
     #[arg(short = 'u', long = "architecture", help = "Override target architecture")]
@@ -67,8 +69,11 @@ enum Commands {
         #[command(subcommand)]
         action: ConfigAction,
     },
-    #[command(about = "Initialize workspace or set everything to default")]
-    Init,
+    #[command(about = "Manage workspace configuration and directories")]
+    Workspace {
+        #[command(subcommand)]
+        action: WorkspaceAction,
+    },
     #[command(about = "Manage PEM identity files")]
     Pem {
         #[command(subcommand)]
@@ -76,6 +81,14 @@ enum Commands {
     },
     #[command(about = "Patch a specified APK file")]
     Patch(Box<PatchArgs>),
+}
+
+#[derive(Subcommand)]
+enum WorkspaceAction {
+    #[command(about = "Initialize workspace from scratch, destroying existing workspaces")]
+    Init,
+    #[command(about = "Repair workspace, keeping intact files and recovering partial configs")]
+    Repair,
 }
 
 #[derive(Subcommand)]
@@ -141,7 +154,7 @@ fn main() {
     }
 
     match cli.command {
-        Some(Commands::Init) => handle_init_command(show_ui),
+        Some(Commands::Workspace { action }) => handle_workspace_command(action, show_ui),
         Some(Commands::Pem { action }) => handle_pem_command(action, show_ui),
         Some(Commands::Keys { action }) => handle_keys_command(action, show_ui),
         Some(Commands::Config { action }) => handle_config_command(action, show_ui),
@@ -226,9 +239,9 @@ fn handle_patch_command(args: PatchArgs, show_ui: bool) {
         return;
     }
 
-    let final_force_action = args.force_action.map(|action_string| action_string.to_lowercase());
+    let final_behavior_str = args.behavior.map(|action_string| action_string.to_lowercase());
 
-    let final_behavior = if let Some(ref selected_action) = final_force_action {
+    let final_behavior = if let Some(ref selected_action) = final_behavior_str {
         match selected_action.as_str() {
             "update" | "u" => OutputBehavior::Replace,
             "create" | "c" => OutputBehavior::Create,
@@ -236,18 +249,20 @@ fn handle_patch_command(args: PatchArgs, show_ui: bool) {
             _ => {
                 if show_ui {
                     println!(
-                        "\n  {} Invalid Force Flag: '{}' Must be 'update' (u), 'create' (c) or 'automatic' (a)\n",
+                        "\n  {} Invalid Behavior Flag: '{}' Must be 'update' (u), 'create' (c) or 'automatic' (a)\n",
                         "✗".red(),
                         selected_action.cyan()
                     );
                 }
-                tracing::error!(flag = %selected_action, "Invalid force flag provided");
+                tracing::error!(flag = %selected_action, "Invalid behavior flag provided");
                 return;
             }
         }
     } else {
         base_config.output_behavior
     };
+
+    let force_inject_path = args.force_inject.map(PathBuf::from);
 
     let resolved_apk_path = PathBuf::from(&args.apk_path);
     if !resolved_apk_path.exists() {
@@ -269,6 +284,7 @@ fn handle_patch_command(args: PatchArgs, show_ui: bool) {
         target_package_suffix: final_package_suffix,
         target_region: final_region,
         output_behavior: final_behavior,
+        force_inject: force_inject_path,
         pem_file: final_pem_file,
         target_architecture: final_architecture,
         show_ui,
@@ -291,22 +307,45 @@ fn handle_patch_command(args: PatchArgs, show_ui: bool) {
     }
 }
 
-fn handle_init_command(show_ui: bool) {
-    match workspace::init(show_ui) {
-        Ok(_) => {
-            if show_ui {
-                println!(
-                    "\n  {} Workspace initialized, Created config files and directories\n",
-                    "✓".green()
-                );
+fn handle_workspace_command(action_type: WorkspaceAction, show_ui: bool) {
+    match action_type {
+        WorkspaceAction::Init => {
+            match workspace::init(show_ui) {
+                Ok(_) => {
+                    if show_ui {
+                        println!(
+                            "\n  {} Workspace initialized, Created config files and directories\n",
+                            "✓".green()
+                        );
+                    }
+                    tracing::info!("Workspace initialized successfully");
+                }
+                Err(err) => {
+                    if show_ui {
+                        println!("\n  {} Failed to initialize workspace: {}\n", "✗".red(), err);
+                    }
+                    tracing::error!(error = %err, "Failed to initialize workspace");
+                }
             }
-            tracing::info!("Workspace initialized successfully");
         }
-        Err(err) => {
-            if show_ui {
-                println!("\n  {} Failed to initialize workspace: {}\n", "✗".red(), err);
+        WorkspaceAction::Repair => {
+            match workspace::repair(show_ui) {
+                Ok(_) => {
+                    if show_ui {
+                        println!(
+                            "\n  {} Workspace repaired successfully\n",
+                            "✓".green()
+                        );
+                    }
+                    tracing::info!("Workspace repaired successfully");
+                }
+                Err(err) => {
+                    if show_ui {
+                        println!("\n  {} Failed to repair workspace: {}\n", "✗".red(), err);
+                    }
+                    tracing::error!(error = %err, "Failed to repair workspace");
+                }
             }
-            tracing::error!(error = %err, "Failed to initialize workspace");
         }
     }
 }

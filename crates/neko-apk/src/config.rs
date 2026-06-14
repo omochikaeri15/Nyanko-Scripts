@@ -2,7 +2,7 @@ use crate::io::{load_local, save_local};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::io::{Write, stdin, stdout};
-use tracing::{error, info};
+use tracing::{error, info, debug};
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -19,6 +19,7 @@ impl Default for OutputBehavior {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(default)]
 pub struct AppConfig {
     pub app_name: String,
     pub package_suffix: String,
@@ -61,6 +62,65 @@ impl AppConfig {
 
     pub fn save(&self) {
         save_local("config.json", self);
+    }
+
+    pub fn repair(show_ui: bool) {
+        let config_path = crate::io::get_local_dir().join("config.json");
+        let default_config = Self::default();
+        let mut repaired = false;
+
+        match std::fs::read_to_string(&config_path) {
+            Ok(content) => {
+                if let Ok(parsed) = serde_json::from_str::<Self>(&content) {
+                    let serialized_test = serde_json::to_string_pretty(&parsed).unwrap_or_default();
+                    if content.replace("\r\n", "\n").trim() != serialized_test.replace("\r\n", "\n").trim() {
+                        parsed.save();
+                        repaired = true;
+                        debug!("Config structure/ordering differed. Re-ordered to defaults.");
+                    }
+                } else {
+                    let mut salvaged_json = serde_json::to_value(&default_config).unwrap();
+
+                    for line in content.lines() {
+                        let trimmed = line.trim();
+                        let Some((key_part, value_part)) = trimmed.split_once(':') else { continue; };
+
+                        let key = key_part.trim().trim_matches('"');
+                        let mut val_str = value_part.trim();
+                        if val_str.ends_with(',') {
+                            val_str = &val_str[..val_str.len() - 1];
+                        }
+                        val_str = val_str.trim();
+
+                        let Some(target) = salvaged_json.get_mut(key) else { continue; };
+
+                        if val_str.starts_with('"') && val_str.ends_with('"') {
+                            *target = serde_json::Value::String(val_str.trim_matches('"').to_string());
+                        } else if val_str == "true" {
+                            *target = serde_json::Value::Bool(true);
+                        } else if val_str == "false" {
+                            *target = serde_json::Value::Bool(false);
+                        } else if let Ok(num) = val_str.parse::<serde_json::Number>() {
+                            *target = serde_json::Value::Number(num);
+                        }
+                    }
+
+                    let final_config = serde_json::from_value::<Self>(salvaged_json).unwrap_or(default_config);
+                    final_config.save();
+                    repaired = true;
+                    debug!("Config file partially corrupted. Salvaged successfully.");
+                }
+            }
+            Err(_) => {
+                default_config.save();
+                repaired = true;
+                debug!("Config missing entirely. Recreated with defaults.");
+            }
+        }
+
+        if show_ui && repaired {
+            println!("  {} Repaired {}", "✓".green(), "config.json".cyan());
+        }
     }
 
     pub fn reset(show_ui: bool) {
