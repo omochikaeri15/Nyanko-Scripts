@@ -72,19 +72,19 @@ pub fn print_env_template(show_ui: bool) {
     if !show_ui {
         tracing::info!(
             msg = "Environment variable configuration requirements",
-            required_vars = "BCC_PEM"
+            required_vars = "NEKO_PEM"
         );
         return;
     }
 
     println!("\n=================================================================================");
-    println!("                   BCC HEADLESS ENVIRONMENT VARIABLES                            ");
+    println!("                   NEKO HEADLESS ENVIRONMENT VARIABLES                            ");
     println!("=================================================================================");
     println!("To bypass the local 'debug.pem' file, export the complete PEM string.\n");
 
     println!(
         "  {:<15} : Full RSA private key and certificate string",
-        "BCC_PEM".cyan().bold()
+        "NEKO_PEM".cyan().bold()
     );
     println!("=================================================================================");
 
@@ -94,7 +94,7 @@ pub fn print_env_template(show_ui: bool) {
     );
     println!(
         "{}",
-        "  export BCC_PEM=\"-----BEGIN PRIVATE KEY-----\\nMIIE...\\n-----END CERTIFICATE-----\"".bright_black()
+        "  export NEKO_PEM=\"-----BEGIN PRIVATE KEY-----\\nMIIE...\\n-----END CERTIFICATE-----\"".bright_black()
     );
     println!();
 }
@@ -113,12 +113,12 @@ pub fn get_active_pem(custom_override: Option<&String>) -> String {
         std::process::exit(1);
     }
 
-    if let Ok(env_pem) = std::env::var("BCC_PEM") {
+    if let Ok(env_pem) = std::env::var("NEKO_PEM") {
         if env_pem.contains("-----BEGIN PRIVATE KEY-----") && env_pem.contains("-----BEGIN CERTIFICATE-----") {
-            tracing::debug!("Loaded identity from BCC_PEM environment variable");
+            tracing::debug!("Loaded identity from NEKO_PEM environment variable");
             return env_pem;
         }
-        tracing::warn!("BCC_PEM env-var found but invalid. Falling back...");
+        tracing::warn!("NEKO_PEM env-var found but invalid. Falling back...");
     }
 
     let local_path = get_pem_path();

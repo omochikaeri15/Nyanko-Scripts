@@ -35,31 +35,31 @@ impl UserKeys {
             load_local("keys").unwrap_or_default()
         };
 
-        if let Ok(env_key) = std::env::var("BCC_KEY_JP") {
+        if let Ok(env_key) = std::env::var("NEKO_KEY_JP") {
             current_keys.ja.key = env_key;
         }
-        if let Ok(env_iv) = std::env::var("BCC_IV_JP") {
+        if let Ok(env_iv) = std::env::var("NEKO_IV_JP") {
             current_keys.ja.iv = env_iv;
         }
 
-        if let Ok(env_key) = std::env::var("BCC_KEY_EN") {
+        if let Ok(env_key) = std::env::var("NEKO_KEY_EN") {
             current_keys.en.key = env_key;
         }
-        if let Ok(env_iv) = std::env::var("BCC_IV_EN") {
+        if let Ok(env_iv) = std::env::var("NEKO_IV_EN") {
             current_keys.en.iv = env_iv;
         }
 
-        if let Ok(env_key) = std::env::var("BCC_KEY_TW") {
+        if let Ok(env_key) = std::env::var("NEKO_KEY_TW") {
             current_keys.tw.key = env_key;
         }
-        if let Ok(env_iv) = std::env::var("BCC_IV_TW") {
+        if let Ok(env_iv) = std::env::var("NEKO_IV_TW") {
             current_keys.tw.iv = env_iv;
         }
 
-        if let Ok(env_key) = std::env::var("BCC_KEY_KR") {
+        if let Ok(env_key) = std::env::var("NEKO_KEY_KR") {
             current_keys.ko.key = env_key;
         }
-        if let Ok(env_iv) = std::env::var("BCC_IV_KR") {
+        if let Ok(env_iv) = std::env::var("NEKO_IV_KR") {
             current_keys.ko.iv = env_iv;
         }
 
@@ -95,50 +95,50 @@ impl UserKeys {
             tracing::info!(
                 msg = "Environment variable configuration requirements",
                 required_vars =
-                    "BCC_KEY_JP, BCC_IV_JP, BCC_KEY_EN, BCC_IV_EN, BCC_KEY_TW, BCC_IV_TW, BCC_KEY_KR, BCC_IV_KR"
+                    "NEKO_KEY_JP, NEKO_IV_JP, NEKO_KEY_EN, NEKO_IV_EN, NEKO_KEY_TW, NEKO_IV_TW, NEKO_KEY_KR, NEKO_IV_KR"
             );
             return;
         }
 
         println!("\n=================================================================================");
-        println!("                   BCC HEADLESS ENVIRONMENT VARIABLES                            ");
+        println!("                   NEKO HEADLESS ENVIRONMENT VARIABLES                            ");
         println!("=================================================================================");
         println!("To bypass 'keys.json', export the following hexadecimal keys into your system:\n");
 
         println!(
             "  {:<15} : Hex-encoded decryption key for the Japanese region",
-            "BCC_KEY_JP".cyan().bold()
+            "NEKO_KEY_JP".cyan().bold()
         );
         println!(
             "  {:<15} : 16-byte initialization vector for the Japanese region",
-            "BCC_IV_JP".cyan().bold()
+            "NEKO_IV_JP".cyan().bold()
         );
         println!("---------------------------------------------------------------------------------");
         println!(
             "  {:<15} : Hex-encoded decryption key for the English region",
-            "BCC_KEY_EN".cyan().bold()
+            "NEKO_KEY_EN".cyan().bold()
         );
         println!(
             "  {:<15} : 16-byte initialization vector for the English region",
-            "BCC_IV_EN".cyan().bold()
+            "NEKO_IV_EN".cyan().bold()
         );
         println!("---------------------------------------------------------------------------------");
         println!(
             "  {:<15} : Hex-encoded decryption key for the Taiwanese region",
-            "BCC_KEY_TW".cyan().bold()
+            "NEKO_KEY_TW".cyan().bold()
         );
         println!(
             "  {:<15} : 16-byte initialization vector for the Taiwanese region",
-            "BCC_IV_TW".cyan().bold()
+            "NEKO_IV_TW".cyan().bold()
         );
         println!("---------------------------------------------------------------------------------");
         println!(
             "  {:<15} : Hex-encoded decryption key for the Korean region",
-            "BCC_KEY_KR".cyan().bold()
+            "NEKO_KEY_KR".cyan().bold()
         );
         println!(
             "  {:<15} : 16-byte initialization vector for the Korean region",
-            "BCC_IV_KR".cyan().bold()
+            "NEKO_IV_KR".cyan().bold()
         );
         println!("=================================================================================");
 
@@ -148,11 +148,11 @@ impl UserKeys {
         );
         println!(
             "{}",
-            "  export BCC_KEY_EN=\"0123456789abcdef0123456789abcdef\"".bright_black()
+            "  export NEKO_KEY_EN=\"0123456789abcdef0123456789abcdef\"".bright_black()
         );
         println!(
             "{}",
-            "  export BCC_IV_EN=\"abcdef0123456789abcdef0123456789\"".bright_black()
+            "  export NEKO_IV_EN=\"abcdef0123456789abcdef0123456789\"".bright_black()
         );
         println!();
     }
@@ -164,7 +164,7 @@ impl UserKeys {
         }
 
         let mut updated_keys = Self::load();
-        println!("\n--- BCC Key Configuration Wizard ---");
+        println!("\n--- NEKO Key Configuration Wizard ---");
         println!("Paste your Hex keys and IVs below. Leave blank to skip a field.\n");
 
         let input_ja_key = prompt_for_field("Enter JP Key: ");

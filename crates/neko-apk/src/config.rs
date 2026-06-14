@@ -143,7 +143,7 @@ impl AppConfig {
         }
 
         let mut active_config = Self::load();
-        println!("\n--- BCC-APK Configuration Wizard ---");
+        println!("\n--- Neko-Apk Configuration Wizard ---");
 
         let user_name_input = request_user_input("Enter App Name: ");
         if !user_name_input.is_empty() {
